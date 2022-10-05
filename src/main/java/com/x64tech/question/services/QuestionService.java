@@ -64,4 +64,6 @@ public class QuestionService {
             return ResponseEntity.ok("question not found");
         }
     }
+
+    //public void voteAnswer()
 }
