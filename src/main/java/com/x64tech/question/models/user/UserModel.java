@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
@@ -17,13 +18,15 @@ import java.util.List;
 public class UserModel {
     @Id
     String id;
-    String name, email, password;
-    String[] voted_ans;
-    List<UserModel.Answer> answered;
+    String name;
+    @Indexed(unique = true)
+    String email;
+    String password;
+    List<UserModel.Question> saved_question;
 
     @Setter
     @Getter
-    static class Answer {
+    static class Question {
         String questionID, question;
     }
 

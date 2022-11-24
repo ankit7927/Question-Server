@@ -17,5 +17,5 @@ public class AnswerModel {
     String id;
     String answer;
     String answered_by;
-    int vote;
+    String[] vote;
 }
