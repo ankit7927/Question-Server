@@ -23,7 +23,7 @@ router.post("/signup", (req, res) => {
 });
 
 // voter login
-router.post("/login", (req, res) => {
+router.post("/signin", (req, res) => {
     const { username, password } = req.body;
 
     userSchema.findOne({

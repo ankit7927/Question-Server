@@ -3,13 +3,18 @@ const questionSchema = require("../database/schemas/questionSchema");
 const userSchema = require("../database/schemas/userSchema");
 var router = express.Router();
 
+
+
+/**
+ * create new question...
+ * collect tags and update in db.
+ */
 router.post("/new-question", (req, res) => {
     const { question, username, email, tags, userID } = req.body;   //replace usename with id useing token auth
     const newQuestion = new questionSchema({
         question: question,
         "createdBy.username": username,
         "createdBy.email": email,
-        timeStamp: new Date(),
         tags: tags.split(",")
     })
 
@@ -17,6 +22,7 @@ router.post("/new-question", (req, res) => {
         if (err) {
             return res.status(500).send(err);
         } else {
+            /*
             const result = await userSchema.findByIdAndUpdate(
                 {
                     _id: userID
@@ -32,6 +38,7 @@ router.post("/new-question", (req, res) => {
             if (!result) {
                 return res.status(500).send("someting error");
             }
+            */
             return res.status(200).send(data)
         }
     })
@@ -55,6 +62,7 @@ router.post("/answer", (req, res) => {
             if (err) {
                 return res.status(500).send(err);
             } else {
+                /*
                 const result = await userSchema.findByIdAndUpdate(
                     {
                         _id: userID
@@ -69,7 +77,7 @@ router.post("/answer", (req, res) => {
 
                 if (!result) {
                     return res.status(500).send("someting error");
-                }
+                } */
                 return res.status(200).send(data)
             }
         }
@@ -122,9 +130,22 @@ router.get("/", (req, res) => {
  * get latest questions
  */
 router.get("/latest", (req, res) => {
+    const currentDt = new Date()
+    const endDt = new Date()
+    endDt.setMonth(currentDt.getMonth() - 1)
     questionSchema.find({
-
-    })
+        createdAt: {
+            $gte: endDt,
+            $lte: currentDt
+        }
+    }, { question: 1, stars: 1, createdAt: 1 },
+        (err, data) => {
+            if (err) {
+                return res.status(500).send(err);
+            } else {
+                return res.send(data)
+            }
+        })
 })
 
 /**
@@ -143,4 +164,40 @@ router.get("/tag/:tag", (req, res) => {
         }
     })
 })
+
+/**
+ * get questions for home page new, poplure, not answerd
+ * new question have range of one month from now..
+ * and pic those question which not answerd any more..
+ * poploure questions will have higher stars
+ */
+router.get("/index", async (req, res) => {
+    const result = {}
+    const currentDt = new Date()
+    const endDt = new Date()
+    endDt.setMonth(currentDt.getMonth() - 1)
+    result.latest = await questionSchema.find({
+        createdAt: {
+            $gte: endDt,
+            $lte: currentDt
+        }
+    }, { question: 1, stars: 1, createdAt: 1 })
+
+    result.hot = await questionSchema.find({
+        stars: {
+            $gte: 50,
+            $lte: 100
+        }
+    }, { question: 1, stars: 1, createdAt: 1 })
+
+    result.not_answerd = await questionSchema.find({
+        answers: {
+            $eq: []
+        }
+    }, { question: 1, stars: 1, createdAt: 1 })
+
+    return res.send(result)
+
+})
+
 module.exports = router;

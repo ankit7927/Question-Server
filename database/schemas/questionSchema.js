@@ -15,7 +15,10 @@ const questionSchema = new mongoose.Schema({
             required: true
         }
     },
-    timeStamp: String,
+    createdAt:{
+        type:Date,
+        default:new Date()
+    },
     tags: [String],
     stars: {
         type: Number,
