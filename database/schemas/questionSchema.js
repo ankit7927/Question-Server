@@ -11,8 +11,7 @@ const questionSchema = new mongoose.Schema({
             required: true
         },
         email: {
-            type: String,
-            required: true
+            type: String
         }
     },
     createdAt:{
@@ -21,6 +20,10 @@ const questionSchema = new mongoose.Schema({
     },
     tags: [String],
     stars: {
+        type: Number,
+        default: 0
+    },
+    views: {
         type: Number,
         default: 0
     },
@@ -40,7 +43,10 @@ const questionSchema = new mongoose.Schema({
                     required: true
                 }
             },
-            timeStamp: String,
+            createdAt:{
+                type:Date,
+                default:new Date()
+            },
             likes: {
                 type: Number,
                 default: 0

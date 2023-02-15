@@ -1,7 +1,7 @@
 const mongoose = require("mongoose")
 
 const remoteDB = `mongodb+srv://Ankit:${process.env.DBPASS}@electiondb.nxv1f0v.mongodb.net/?retryWrites=true&w=majority`
-const localDB = "mongodb://localhost:27017/question";
+const localDB = "mongodb://127.0.0.1:27017/questionDB";
 
 /*
 mongoose.set("strictQuery", false)
@@ -14,10 +14,12 @@ mongoose.connect(localDB, {
 */
 
 mongoose.set("strictQuery", false)
-main().catch(err => console.log(err));
+main().then(()=>{
+    console.log("conncted to database");
+}).catch(err => console.log(err));
 
 async function main() {
-  await mongoose.connect('mongodb://127.0.0.1:27017/test');
+  await mongoose.connect(localDB);
 }
 
 

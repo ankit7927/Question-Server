@@ -1,5 +1,6 @@
 var express = require("express");
 const questionSchema = require("../database/schemas/questionSchema");
+const tagSchema = require("../database/schemas/tagSchema");
 const userSchema = require("../database/schemas/userSchema");
 var router = express.Router();
 
@@ -10,38 +11,41 @@ var router = express.Router();
  * collect tags and update in db.
  */
 router.post("/new-question", (req, res) => {
-    const { question, username, email, tags, userID } = req.body;   //replace usename with id useing token auth
+    const { question, username, tags, userID } = req.body;   //replace usename with id useing token auth
+
+    const xtags = tags.split(",")
     const newQuestion = new questionSchema({
         question: question,
         "createdBy.username": username,
-        "createdBy.email": email,
-        tags: tags.split(",")
+        "createdBy.email": "",
+        tags: xtags
     })
-
-    newQuestion.save(async (err, data) => {
-        if (err) {
-            return res.status(500).send(err);
-        } else {
+    newQuestion.save()
+        .then(data => {
             /*
-            const result = await userSchema.findByIdAndUpdate(
-                {
-                    _id: userID
-                }, {
-                "$push": {
-                    "question.asked": {
-                        question: data.question,
-                        quesID: data._id
+                userSchema.findByIdAndUpdate(
+                    {
+                        _id: userID
+                    }, {
+                    "$push": {
+                        "question.asked": {
+                            question: data.question,
+                            quesID: data._id
+                        }
                     }
-                }
-            })
-
-            if (!result) {
-                return res.status(500).send("someting error");
-            }
-            */
-            return res.status(200).send(data)
-        }
-    })
+                }).then(data=>{ */
+            tagSchema.updateMany({},
+                {
+                    $push: {
+                        tags: xtags
+                    }
+                })
+                .then(tagData => {
+                    return res.send("ok")
+                }).catch(err => { return res.send(err) }) /*
+                }).catch(err => {res.status(500).send("someting error");})
+                */
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 router.post("/answer", (req, res) => {
@@ -52,49 +56,49 @@ router.post("/answer", (req, res) => {
             "$push": {
                 answers: {
                     answer: answer,
-                    timeStamp: new Date(),
                     "createdBy.username": username,
                     "createdBy.email": email,
                 }
             }
-        }, { new: true },
-        async (err, data) => {
-            if (err) {
-                return res.status(500).send(err);
-            } else {
-                /*
-                const result = await userSchema.findByIdAndUpdate(
-                    {
-                        _id: userID
-                    }, {
-                    "$push": {
-                        "question.answerd": {
-                            question: data.question,
-                            quesID: data._id
-                        }
+        }, { new: true })
+        .then(data => {
+            /*
+            const result = await userSchema.findByIdAndUpdate(
+                {
+                    _id: userID
+                }, {
+                "$push": {
+                    "question.answerd": {
+                        question: data.question,
+                        quesID: data._id
                     }
-                })
+                }
+            })
 
-                if (!result) {
-                    return res.status(500).send("someting error");
-                } */
-                return res.status(200).send(data)
-            }
+            if (!result) {
+                return res.status(500).send("someting error");
+            } */
+            return res.status(200).send(data);
         }
-    )
+        ).catch(err => { return res.status(500).send(err); })
 })
 
 router.get("/que/:queID", (req, res) => {
     questionSchema.findById(
         { _id: req.params.queID },
-        { question: 1, stars: 1, createdBy: 1, timeStamp: 1, answers: 1 },
-        (err, data) => {
-            if (err) {
-                return res.status(500).send(err);
-            } else {
-                return res.send(data)
-            }
-        })
+        { question: 1, stars: 1, createdBy: 1, createdAt: 1, answers: 1, views: 1 })
+        .then(data => {
+            console.log(data);
+            questionSchema.findByIdAndUpdate({ _id: data._id },
+                {
+                    $set: {
+                        views: data.views + 1
+                    }
+                }, {new :true})
+                .then(updated=>{return res.send(updated)})
+                .catch(err=>{console.log(err);})
+            
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 /**
@@ -116,13 +120,10 @@ router.get("/", (req, res) => {
                     }
                 }
             ]
-        }, { question: 1, stars: 1 }, (err, data) => {
-            if (err) {
-                return res.status(500).send(err);
-            } else {
-                return res.send(data)
-            }
-        })
+        }, { question: 1, createdAt: 1, createdBy: 1 })
+        .then(data => {
+            return res.send(data)
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 
@@ -138,14 +139,10 @@ router.get("/latest", (req, res) => {
             $gte: endDt,
             $lte: currentDt
         }
-    }, { question: 1, stars: 1, createdAt: 1 },
-        (err, data) => {
-            if (err) {
-                return res.status(500).send(err);
-            } else {
-                return res.send(data)
-            }
-        })
+    }, { question: 1, stars: 1, createdAt: 1 })
+        .then(data => {
+            return res.send(data)
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 /**
@@ -156,13 +153,10 @@ router.get("/tag/:tag", (req, res) => {
         "tags": {
             $regex: req.params.tag
         }
-    }, { question: 1, stars: 1 }, (err, data) => {
-        if (err) {
-            return res.status(500).send(err);
-        } else {
+    }, { question: 1, stars: 1 })
+        .then(data => {
             return res.send(data)
-        }
-    })
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 /**
@@ -176,28 +170,45 @@ router.get("/index", async (req, res) => {
     const currentDt = new Date()
     const endDt = new Date()
     endDt.setMonth(currentDt.getMonth() - 1)
+
     result.latest = await questionSchema.find({
         createdAt: {
             $gte: endDt,
             $lte: currentDt
         }
-    }, { question: 1, stars: 1, createdAt: 1 })
+    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
 
     result.hot = await questionSchema.find({
         stars: {
             $gte: 50,
             $lte: 100
         }
-    }, { question: 1, stars: 1, createdAt: 1 })
+    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
 
     result.not_answerd = await questionSchema.find({
         answers: {
             $eq: []
         }
-    }, { question: 1, stars: 1, createdAt: 1 })
+    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
 
     return res.send(result)
 
 })
 
+router.get("/tags", (req, res) => {
+    tagSchema.find({})
+        .then(data => {
+            data = [...new Set(data[0].tags)];
+            return res.send(data)
+        }).catch(err => { return res.send(err) })
+})
+
+// this method has to be executed by admin
+router.post("/tags", (req, res) => {
+    const newTags = new tagSchema({
+        tags: req.body.tags.split(",")
+    })
+    newTags.save()
+    return res.status(200).send()
+})
 module.exports = router;
