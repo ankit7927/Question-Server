@@ -1,9 +1,10 @@
 var express = require("express");
 const userSchema = require("../database/schemas/userSchema");
 const { generateToken } = require("../extras/JWTHelper");
+const { verifyToken } = require("../extras/JWTHelper");
 var router = express.Router();
 
-// voters signup
+// user signup
 router.post("/signup", (req, res) => {
     const { name, email, username, password } = req.body;
 
@@ -22,26 +23,32 @@ router.post("/signup", (req, res) => {
     });
 });
 
-// voter login
+// user login
 router.post("/signin", (req, res) => {
     const { username, password } = req.body;
 
     userSchema.findOne({
         username: username,
         password: password
-    }, (err, data) => {
-        if (err || data == null) {
-            return res.status(400).send("wrong username or password");
-        } else {
-            return res.status(200).json({
-                "token": generateToken(data._id),
-                "name": data.name,
-                "email": data.email,
-                "username": data.username,
-                "userID":data._id
-            })
-        }
-    });
+    }).then(data => {
+        return res.status(200).json({
+            "token": generateToken(data._id),
+            "name": data.name,
+            "email": data.email,
+            "username": data.username,
+            "userID": data._id
+        })
+    }).catch(err => { return res.status(400).send("wrong username or password"); })
 });
+
+router.get("/profile", verifyToken, (req, res) => {
+    const userID = req.user._id;
+    userSchema.findOne({_id:userID}, {question:1, name:1, email:1, username:1})
+    .then(data=>{
+        return res.send(data)
+    }).catch(err=>{
+        return res.status(500).send("something went wrong");
+    })
+})
 
 module.exports = router;
