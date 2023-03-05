@@ -2,6 +2,7 @@ var express = require("express");
 const questionSchema = require("../database/schemas/questionSchema");
 const tagSchema = require("../database/schemas/tagSchema");
 const userSchema = require("../database/schemas/userSchema");
+const { verifyToken } = require("../extras/JWTHelper");
 var router = express.Router();
 
 
@@ -10,74 +11,63 @@ var router = express.Router();
  * create new question...
  * collect tags and update in db.
  */
-router.post("/new-question", (req, res) => {
-    const { question, username, tags, userID } = req.body;   //replace usename with id useing token auth
+router.post("/new-question", verifyToken, async (req, res) => {
+    const id = req.user._id
+    const { title, content, tags } = req.body;
+
+    const user = await userSchema.findOne({ _id: id })
 
     const xtags = tags.split(",")
     const newQuestion = new questionSchema({
-        question: question,
-        "createdBy.username": username,
-        "createdBy.email": "",
+        "question.title": title,
+        "question.content": content,
+        name: user.name,
         tags: xtags
     })
+
     newQuestion.save()
         .then(data => {
-            /*
-                userSchema.findByIdAndUpdate(
-                    {
-                        _id: userID
-                    }, {
-                    "$push": {
-                        "question.asked": {
-                            question: data.question,
-                            quesID: data._id
-                        }
-                    }
-                }).then(data=>{ */
+            user.question.asked.push({
+                questionTitle: title,
+                quesID: data._id
+            })
+
+            user.save()
+
             tagSchema.updateMany({},
                 {
                     $push: {
                         tags: xtags
                     }
-                })
-                .then(tagData => {
-                    return res.send("ok")
-                }).catch(err => { return res.send(err) }) /*
-                }).catch(err => {res.status(500).send("someting error");})
-                */
+                }).then(data=>console.log(data))
+                .catch(err=>console.log(err))
+            return res.send("ok")
+
         }).catch(err => { return res.status(500).send(err); })
 })
 
-router.post("/answer", (req, res) => {
-    const { answer, username, email, userID, quesID } = req.body
+router.post("/answer", async (req, res) => {
+    const { answer, email, name, quesID } = req.body
+    const user = await userSchema.findOne({ email: email })
     questionSchema.findByIdAndUpdate(
         { _id: quesID },
         {
             "$push": {
                 answers: {
                     answer: answer,
-                    "createdBy.username": username,
-                    "createdBy.email": email,
+                    email: email,
+                    name: name
                 }
             }
         }, { new: true })
         .then(data => {
-            /*
-            const result = await userSchema.findByIdAndUpdate(
-                {
-                    _id: userID
-                }, {
-                "$push": {
-                    "question.answerd": {
-                        question: data.question,
-                        quesID: data._id
-                    }
-                }
+            user?.question.answerd.push({
+                questionTitle: data.question.title,
+                quesID: data._id
             })
 
-            if (!result) {
-                return res.status(500).send("someting error");
-            } */
+            user.save()
+
             return res.status(200).send(data);
         }
         ).catch(err => { return res.status(500).send(err); })
@@ -85,8 +75,7 @@ router.post("/answer", (req, res) => {
 
 router.get("/que/:queID", (req, res) => {
     questionSchema.findById(
-        { _id: req.params.queID },
-        { question: 1, stars: 1, createdBy: 1, createdAt: 1, answers: 1, views: 1 })
+        { _id: req.params.queID })
         .then(data => {
             console.log(data);
             questionSchema.findByIdAndUpdate({ _id: data._id },
@@ -94,10 +83,10 @@ router.get("/que/:queID", (req, res) => {
                     $set: {
                         views: data.views + 1
                     }
-                }, {new :true})
-                .then(updated=>{return res.send(updated)})
-                .catch(err=>{console.log(err);})
-            
+                }, { new: true })
+                .then(updated => { return res.send(updated) })
+                .catch(err => { console.log(err); })
+
         }).catch(err => { return res.status(500).send(err); })
 })
 
@@ -120,12 +109,12 @@ router.get("/", (req, res) => {
                     }
                 }
             ]
-        }, { question: 1, createdAt: 1, createdBy: 1 })
+        }, { question: 1, createdAt: 1, email: 1 }, { limit: 12 })
         .then(data => {
             return res.send(data)
         }).catch(err => { return res.status(500).send(err); })
 })
-
+    /
 
 /**
  * get latest questions
@@ -139,10 +128,23 @@ router.get("/latest", (req, res) => {
             $gte: endDt,
             $lte: currentDt
         }
-    }, { question: 1, stars: 1, createdAt: 1 })
+    }, { question: 1, stars: 1, createdAt: 1, name: 1 })
         .then(data => {
             return res.send(data)
         }).catch(err => { return res.status(500).send(err); })
+})
+
+router.get("/ananswred", (req, res) => {
+    questionSchema.find({
+        answers: {
+            $eq: []
+        }
+    }, { question: 1, stars: 1, createdAt: 1, name: 1 }, { limit: 20 })
+        .then((data) => {
+            return res.send(data)
+        }).catch(err => {
+            err => { return res.status(500).send(err); }
+        })
 })
 
 /**
@@ -195,6 +197,7 @@ router.get("/index", async (req, res) => {
 
 })
 
+
 router.get("/tags", (req, res) => {
     tagSchema.find({})
         .then(data => {
@@ -203,12 +206,4 @@ router.get("/tags", (req, res) => {
         }).catch(err => { return res.send(err) })
 })
 
-// this method has to be executed by admin
-router.post("/tags", (req, res) => {
-    const newTags = new tagSchema({
-        tags: req.body.tags.split(",")
-    })
-    newTags.save()
-    return res.status(200).send()
-})
 module.exports = router;

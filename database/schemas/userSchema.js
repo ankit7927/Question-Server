@@ -7,12 +7,8 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        requred: true
-    },
-    username: {
-        type: String,
+        requred: true,
         unique: true,
-        requred: true
     },
     password: {
         type: String,
@@ -20,24 +16,44 @@ const userSchema = new mongoose.Schema({
     },
     question: {
         asked: [{
-            question: String,
-            quesID: String
+            questionTitle: String,
+            quesID: String,
+            createdAt: {
+                type: Date,
+                default: new Date()
+            },
         }],
         answerd: [{
-            question: String,
-            quesID: String
+            questionTitle: String,
+            quesID: String,
+            createdAt: {
+                type: Date,
+                default: new Date()
+            },
         }],
         saved: [{
-            question: String,
-            quesID: String
+            questionTitle: String,
+            quesID: String,
+            createdAt: {
+                type: Date,
+                default: new Date()
+            },
         }],
         stared: [{
-            question: String,
-            quesID: String
+            questionTitle: String,
+            quesID: String,
+            createdAt: {
+                type: Date,
+                default: new Date()
+            },
         }],
         liked: [{
-            question: String,
-            quesID: String
+            questionTitle: String,
+            quesID: String,
+            createdAt: {
+                type: Date,
+                default: new Date()
+            },
         }],
     }
 })

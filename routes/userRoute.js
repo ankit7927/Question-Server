@@ -5,16 +5,19 @@ const { verifyToken } = require("../extras/JWTHelper");
 var router = express.Router();
 
 // user signup
-router.post("/signup", (req, res) => {
-    const { name, email, username, password } = req.body;
+router.post("/signup", async (req, res) => {
+    const { name, email, password } = req.body;
 
-    const newVoter = new userSchema({
+    const existingUser = await userSchema.findOne({email:email})
+    if(existingUser) return res.status(404).send("email alredy taken");
+     
+    const newUser = new userSchema({
         name: name,
         email: email,
-        username: username,
         password: password,
     });
-    newVoter.save((err) => {
+    console.log(newUser);
+    newUser.save((err) => {
         if (err) {
             return res.status(500).send(err);
         } else {
@@ -25,30 +28,41 @@ router.post("/signup", (req, res) => {
 
 // user login
 router.post("/signin", (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
     userSchema.findOne({
-        username: username,
+        email: email,
         password: password
     }).then(data => {
         return res.status(200).json({
             "token": generateToken(data._id),
             "name": data.name,
             "email": data.email,
-            "username": data.username,
             "userID": data._id
         })
     }).catch(err => { return res.status(400).send("wrong username or password"); })
 });
 
-router.get("/profile", verifyToken, (req, res) => {
+router.put("/profile", verifyToken, (req, res) => {
     const userID = req.user._id;
-    userSchema.findOne({_id:userID}, {question:1, name:1, email:1, username:1})
-    .then(data=>{
-        return res.send(data)
-    }).catch(err=>{
-        return res.status(500).send("something went wrong");
-    })
+    const { name, email } = req.body
+    userSchema.findByIdAndUpdate({ _id: userID },
+        {
+            $set: {
+                name: name,
+                email: email
+            }
+        }).then(data => {
+            return res.send(data);
+        }).catch(err => { return res.status(400).send(err); })
+})
+
+router.get("/questions", verifyToken, (req, res) => {
+    const userID = req.user._id;
+    userSchema.findOne({ _id: userID }, { question: 1 })
+        .then(data => {
+            return res.send(data)
+        }).catch(err => { return res.status(400).send(err); })
 })
 
 module.exports = router;

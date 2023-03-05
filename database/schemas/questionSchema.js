@@ -2,21 +2,22 @@ const mongoose = require("mongoose");
 
 const questionSchema = new mongoose.Schema({
     question: {
-        type: String,
-        required: true
-    },
-    createdBy: {
-        username: {
+        title: {
             type: String,
             required: true
         },
-        email: {
-            type: String
+        content: {
+            type: String,
+            required: true
         }
     },
-    createdAt:{
-        type:Date,
-        default:new Date()
+    name: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: new Date()
     },
     tags: [String],
     stars: {
@@ -33,19 +34,17 @@ const questionSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
-            createdBy: {
-                username: {
-                    type: String,
-                    required: true
-                },
-                email: {
-                    type: String,
-                    required: true
-                }
+            email: {
+                type: String,
+                required: true
             },
-            createdAt:{
-                type:Date,
-                default:new Date()
+            name: {
+                type: String,
+                required: true
+            },
+            createdAt: {
+                type: Date,
+                default: new Date()
             },
             likes: {
                 type: Number,
