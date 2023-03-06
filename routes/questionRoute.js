@@ -71,7 +71,6 @@ router.get("/que/:queID", (req, res) => {
     questionSchema.findById(
         { _id: req.params.queID })
         .then(data => {
-            console.log(data);
             questionSchema.findByIdAndUpdate({ _id: data._id },
                 {
                     $set: {
@@ -199,21 +198,26 @@ router.get("/tags", (req, res) => {
         }).catch(err => { return res.send(err) })
 })
 
-router.post("/vote/:queID", verifyToken, async (req, res) => {
+router.get("/vote/:queID", verifyToken, async (req, res) => {
     const quesID = req.params.queID
 
-    const user = await userSchema.findOne({ _id: req.user._id },
-        {
-            "question": 1
-        })
+    const question = await questionSchema.findOne({ _id: quesID })
+        .select("votes");
+    const user = await userSchema.findOne({ _id: req.user._id })
+        .select("question");
 
     if (user.question.voted.includes(quesID)) {
         user.question.voted.pull(quesID)
+        question.votes = question.votes - 1
     } else {
         user.question.voted.push(quesID)
+        question.votes = question.votes + 1
     }
+
     await user.save()
-    return res.send(user)
+    await question.save()
+
+    return res.send()
 })
 
 module.exports = router;
