@@ -20,7 +20,7 @@ const questionSchema = new mongoose.Schema({
         default: new Date()
     },
     tags: [String],
-    stars: {
+    votes: {
         type: Number,
         default: 0
     },
@@ -46,7 +46,7 @@ const questionSchema = new mongoose.Schema({
                 type: Date,
                 default: new Date()
             },
-            likes: {
+            votes: {
                 type: Number,
                 default: 0
             },
