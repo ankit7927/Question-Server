@@ -27,10 +27,7 @@ router.post("/new-question", verifyToken, async (req, res) => {
 
     newQuestion.save()
         .then(data => {
-            user.question.asked.push({
-                questionTitle: title,
-                quesID: data._id
-            })
+            user.question.asked.push(data._id)
 
             user.save()
 
@@ -39,8 +36,8 @@ router.post("/new-question", verifyToken, async (req, res) => {
                     $push: {
                         tags: xtags
                     }
-                }).then(data=>console.log(data))
-                .catch(err=>console.log(err))
+                }).then(data => console.log(data))
+                .catch(err => console.log(err))
             return res.send("ok")
 
         }).catch(err => { return res.status(500).send(err); })
@@ -61,12 +58,9 @@ router.post("/answer", async (req, res) => {
             }
         }, { new: true })
         .then(data => {
-            user?.question.answerd.push({
-                questionTitle: data.question.title,
-                quesID: data._id
-            })
+            user?.question.answerd.push(data._id)
 
-            user.save()
+            user?.save()
 
             return res.status(200).send(data);
         }
@@ -109,43 +103,56 @@ router.get("/", (req, res) => {
                     }
                 }
             ]
-        }, { question: 1, createdAt: 1, email: 1 }, { limit: 12 })
-        .then(data => {
-            return res.send(data)
-        }).catch(err => { return res.status(500).send(err); })
-})
-    /
-
-/**
- * get latest questions
- */
-router.get("/latest", (req, res) => {
-    const currentDt = new Date()
-    const endDt = new Date()
-    endDt.setMonth(currentDt.getMonth() - 1)
-    questionSchema.find({
-        createdAt: {
-            $gte: endDt,
-            $lte: currentDt
-        }
-    }, { question: 1, stars: 1, createdAt: 1, name: 1 })
+        }, { question: 1, createdAt: 1, email: 1, votes: 1 }, { limit: 18 })
         .then(data => {
             return res.send(data)
         }).catch(err => { return res.status(500).send(err); })
 })
 
-router.get("/ananswred", (req, res) => {
-    questionSchema.find({
-        answers: {
-            $eq: []
-        }
-    }, { question: 1, stars: 1, createdAt: 1, name: 1 }, { limit: 20 })
-        .then((data) => {
-            return res.send(data)
-        }).catch(err => {
-            err => { return res.status(500).send(err); }
-        })
+
+router.get("/latest", async (req, res) => {
+    const latestQuestions = await questionSchema.find()
+        .select('question votes createdAt name')
+        .sort({ createdAt: -1 })
+        .limit(15);
+
+    return res.send(latestQuestions)
 })
+
+router.get("/ananswred", async (req, res) => {
+    const unansweredQuestions = await questionSchema.find({ answers: { $eq: [] } })
+        .select('question votes createdAt name')
+        .limit(20)
+        .sort({ createdAt: -1 });
+
+    res.send(unansweredQuestions);
+
+})
+
+router.get('/trending', async (req, res, next) => {
+    try {
+        const trendingQuestions = await Question.aggregate([
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    upvotes: { $size: "$upvotes" }
+                }
+            },
+            {
+                $sort: { upvotes: -1 }
+            },
+            {
+                $limit: 10 // Returns only the top 10 trending questions
+            }
+        ]);
+
+        res.send(trendingQuestions);
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 /**
  * get questions by tag
@@ -155,7 +162,7 @@ router.get("/tag/:tag", (req, res) => {
         "tags": {
             $regex: req.params.tag
         }
-    }, { question: 1, stars: 1 })
+    }, { question: 1, votes: 1 })
         .then(data => {
             return res.send(data)
         }).catch(err => { return res.status(500).send(err); })
@@ -165,7 +172,7 @@ router.get("/tag/:tag", (req, res) => {
  * get questions for home page new, poplure, not answerd
  * new question have range of one month from now..
  * and pic those question which not answerd any more..
- * poploure questions will have higher stars
+ * poploure questions will have higher votes
  */
 router.get("/index", async (req, res) => {
     const result = {}
@@ -178,20 +185,20 @@ router.get("/index", async (req, res) => {
             $gte: endDt,
             $lte: currentDt
         }
-    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
+    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
 
     result.hot = await questionSchema.find({
         stars: {
             $gte: 50,
             $lte: 100
         }
-    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
+    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
 
     result.not_answerd = await questionSchema.find({
         answers: {
             $eq: []
         }
-    }, { question: 1, stars: 1, createdAt: 1 }, { limit: 6 })
+    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
 
     return res.send(result)
 
@@ -204,6 +211,23 @@ router.get("/tags", (req, res) => {
             data = [...new Set(data[0].tags)];
             return res.send(data)
         }).catch(err => { return res.send(err) })
+})
+
+router.post("/vote/:queID", verifyToken, async (req, res) => {
+    const quesID = req.params.queID
+
+    const user = await userSchema.findOne({ _id: req.user._id },
+        {
+            "question": 1
+        })
+
+    if (user.question.voted.includes(quesID)) {
+        user.question.voted.pull(quesID)
+    } else {
+        user.question.voted.push(quesID)
+    }
+    await user.save()
+    return res.send(user)
 })
 
 module.exports = router;
