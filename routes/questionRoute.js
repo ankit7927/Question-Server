@@ -176,32 +176,18 @@ router.get("/tag/:tag", (req, res) => {
  */
 router.get("/index", async (req, res) => {
     const result = {}
-    const currentDt = new Date()
-    const endDt = new Date()
-    endDt.setMonth(currentDt.getMonth() - 1)
 
-    result.latest = await questionSchema.find({
-        createdAt: {
-            $gte: endDt,
-            $lte: currentDt
-        }
-    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
+    result.latest = await questionSchema.find()
+        .select('question')
+        .sort({ createdAt: -1 })
+        .limit(15);
 
-    result.hot = await questionSchema.find({
-        stars: {
-            $gte: 50,
-            $lte: 100
-        }
-    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
-
-    result.not_answerd = await questionSchema.find({
-        answers: {
-            $eq: []
-        }
-    }, { question: 1, votes: 1, createdAt: 1 }, { limit: 6 })
+    result.trending = await questionSchema.find()
+        .select('question votes createdAt name')
+        .sort({ views: -1, answers: -1 })
+        .limit(10);
 
     return res.send(result)
-
 })
 
 
