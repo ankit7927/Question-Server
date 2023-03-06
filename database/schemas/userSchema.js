@@ -15,46 +15,10 @@ const userSchema = new mongoose.Schema({
         requred: true
     },
     question: {
-        asked: [{
-            questionTitle: String,
-            quesID: String,
-            createdAt: {
-                type: Date,
-                default: new Date()
-            },
-        }],
-        answerd: [{
-            questionTitle: String,
-            quesID: String,
-            createdAt: {
-                type: Date,
-                default: new Date()
-            },
-        }],
-        saved: [{
-            questionTitle: String,
-            quesID: String,
-            createdAt: {
-                type: Date,
-                default: new Date()
-            },
-        }],
-        stared: [{
-            questionTitle: String,
-            quesID: String,
-            createdAt: {
-                type: Date,
-                default: new Date()
-            },
-        }],
-        liked: [{
-            questionTitle: String,
-            quesID: String,
-            createdAt: {
-                type: Date,
-                default: new Date()
-            },
-        }],
+        asked: [mongoose.Schema.Types.ObjectId],
+        answerd: [mongoose.Schema.Types.ObjectId],
+        saved: [mongoose.Schema.Types.ObjectId],
+        voted: [mongoose.Schema.Types.ObjectId],
     }
 })
 
