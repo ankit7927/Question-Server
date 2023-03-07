@@ -2,45 +2,61 @@ var express = require("express");
 const userSchema = require("../database/schemas/userSchema");
 const { generateToken } = require("../extras/JWTHelper");
 const { verifyToken } = require("../extras/JWTHelper");
+const bcrypt = require('bcrypt');
 var router = express.Router();
 
 // user signup
 router.post("/signup", async (req, res) => {
-    const { name, email, password } = req.body;
+    try {
+        const { name, email, password } = req.body;
 
-    const existingUser = await userSchema.findOne({email:email})
-    if(existingUser) return res.status(404).send("email alredy taken");
-     
-    const newUser = new userSchema({
-        name: name,
-        email: email,
-        password: password,
-    });
-    console.log(newUser);
-    newUser.save((err) => {
-        if (err) {
-            return res.status(500).send(err);
-        } else {
-            return res.status(200).send("registerd")
+        const existingUser = await userSchema.findOne({ email: email })
+        if (existingUser) {
+            return res.status(500).send('Email alredy used...');
         }
-    });
+
+        const newUser = new userSchema({
+            name: name,
+            email: email,
+            password: await bcrypt.hash(password, 10),
+        });
+
+        newUser.save((err) => {
+            if (err) {
+                throw err
+            } else {
+                return res.status(201).send("registerd")
+            }
+        });
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 });
 
 // user login
-router.post("/signin", (req, res) => {
-    const { email, password } = req.body;
+router.post("/signin", async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    userSchema.findOne({
-        email: email,
-        password: password
-    }).then(data => {
-        return res.status(200).json({
-            "token": generateToken(data._id),
-            "name": data.name,
-            "email": data.email,
-            "userID": data._id
+        const existingUser = await userSchema.findOne({ email: email })
+        if (!existingUser) {
+            return res.status(404).send('Wrong Email..');
+        }
+
+        const passwordMatch = bcrypt.compare(password, existingUser.password);
+        if (!passwordMatch) {
+            return res.status(404).send('wrong password..');
+        }
+
+        res.status(200).json({
+            "token": generateToken(existingUser._id),
+            "name": existingUser.name,
+            "email": existingUser.email,
+            "userID": existingUser._id
         })
-    }).catch(err => { return res.status(400).send("wrong username or password"); })
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 });
 
 router.put("/profile", verifyToken, (req, res) => {
@@ -54,7 +70,7 @@ router.put("/profile", verifyToken, (req, res) => {
             }
         }).then(data => {
             return res.send(data);
-        }).catch(err => { return res.status(400).send(err); })
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 router.get("/questions", verifyToken, (req, res) => {
@@ -62,7 +78,7 @@ router.get("/questions", verifyToken, (req, res) => {
     userSchema.findOne({ _id: userID }, { question: 1 })
         .then(data => {
             return res.send(data)
-        }).catch(err => { return res.status(400).send(err); })
+        }).catch(err => { return res.status(500).send(err); })
 })
 
 module.exports = router;

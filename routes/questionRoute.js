@@ -12,21 +12,21 @@ var router = express.Router();
  * collect tags and update in db.
  */
 router.post("/new-question", verifyToken, async (req, res) => {
-    const id = req.user._id
-    const { title, content, tags } = req.body;
+    try {
+        const id = req.user._id
+        const { title, content, tags } = req.body;
 
-    const user = await userSchema.findOne({ _id: id })
+        const user = await userSchema.findOne({ _id: id })
 
-    const xtags = tags.split(",")
-    const newQuestion = new questionSchema({
-        "question.title": title,
-        "question.content": content,
-        name: user.name,
-        tags: xtags
-    })
+        const xtags = tags.split(",")
+        const newQuestion = new questionSchema({
+            "question.title": title,
+            "question.content": content,
+            name: user.name,
+            tags: xtags
+        })
 
-    newQuestion.save()
-        .then(data => {
+        newQuestion.save().then(data => {
             user.question.asked.push(data._id)
 
             user.save()
@@ -36,50 +36,55 @@ router.post("/new-question", verifyToken, async (req, res) => {
                     $push: {
                         tags: xtags
                     }
-                }).then(data => console.log(data))
-                .catch(err => console.log(err))
+                }).catch(err => console.log(err))
+
             return res.send("ok")
 
         }).catch(err => { return res.status(500).send(err); })
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 })
 
 router.post("/answer", async (req, res) => {
-    const { answer, email, name, quesID } = req.body
-    const user = await userSchema.findOne({ email: email })
-    questionSchema.findByIdAndUpdate(
-        { _id: quesID },
-        {
-            "$push": {
-                answers: {
-                    answer: answer,
-                    email: email,
-                    name: name
-                }
-            }
-        }, { new: true })
-        .then(data => {
-            user?.question.answerd.push(data._id)
-
-            user?.save()
-
-            return res.status(200).send(data);
+    try {
+        const { answer, email, name, quesID } = req.body
+        const user = await userSchema.findOne({ email: email })
+        if (!user) {
+            return res.status(404).send("User not found..");
         }
-        ).catch(err => { return res.status(500).send(err); })
+        questionSchema.findByIdAndUpdate(
+            { _id: quesID },
+            {
+                "$push": {
+                    answers: {
+                        answer: answer,
+                        email: email,
+                        name: name
+                    }
+                }
+            }, { new: true }).then(data => {
+                user?.question.answerd.push(data._id)
+                user?.save()
+                res.status(201).send(data);
+            }).catch(err => { return res.status(500).send(err); })
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 })
 
-router.get("/que/:queID", (req, res) => {
-    questionSchema.findById(
-        { _id: req.params.queID })
+router.get("/que/:queID", (req, res, next) => {
+
+    questionSchema.findById({ _id: req.params.queID })
         .then(data => {
             questionSchema.findByIdAndUpdate({ _id: data._id },
                 {
                     $set: {
                         views: data.views + 1
                     }
-                }, { new: true })
-                .then(updated => { return res.send(updated) })
-                .catch(err => { console.log(err); })
-
+                }, { new: true }).then(updated => {
+                    return res.send(updated)
+                }).catch(err => { return res.status(500).send(err); })
         }).catch(err => { return res.status(500).send(err); })
 })
 
@@ -103,9 +108,8 @@ router.get("/", (req, res) => {
                 }
             ]
         }, { question: 1, createdAt: 1, email: 1, votes: 1 }, { limit: 18 })
-        .then(data => {
-            return res.send(data)
-        }).catch(err => { return res.status(500).send(err); })
+        .then(data => { res.send(data) })
+        .catch(err => { return res.status(500).send(err); })
 })
 
 
@@ -128,7 +132,7 @@ router.get("/ananswred", async (req, res) => {
 
 })
 
-router.get('/trending', async (req, res, next) => {
+router.get('/trending', async (req, res) => {
     try {
         const trendingQuestions = await Question.aggregate([
             {
@@ -148,24 +152,9 @@ router.get('/trending', async (req, res, next) => {
 
         res.send(trendingQuestions);
     } catch (error) {
-        next(error);
+        return res.status(500).send(error)
     }
 });
-
-
-/**
- * get questions by tag
- */
-router.get("/tag/:tag", (req, res) => {
-    questionSchema.find({
-        "tags": {
-            $regex: req.params.tag
-        }
-    }, { question: 1, votes: 1 })
-        .then(data => {
-            return res.send(data)
-        }).catch(err => { return res.status(500).send(err); })
-})
 
 /**
  * get questions for home page new, poplure, not answerd
@@ -174,50 +163,55 @@ router.get("/tag/:tag", (req, res) => {
  * poploure questions will have higher votes
  */
 router.get("/index", async (req, res) => {
-    const result = {}
+    try {
+        const result = {}
 
-    result.latest = await questionSchema.find()
-        .select('question')
-        .sort({ createdAt: -1 })
-        .limit(15);
+        result.latest = await questionSchema.find()
+            .select('question')
+            .sort({ createdAt: -1 })
+            .limit(15);
 
-    result.trending = await questionSchema.find()
-        .select('question votes createdAt name')
-        .sort({ views: -1, answers: -1 })
-        .limit(10);
+        result.trending = await questionSchema.find()
+            .select('question votes createdAt name')
+            .sort({ views: -1, answers: -1 })
+            .limit(10);
 
-    return res.send(result)
-})
-
-
-router.get("/tags", (req, res) => {
-    tagSchema.find({})
-        .then(data => {
-            data = [...new Set(data[0].tags)];
-            return res.send(data)
-        }).catch(err => { return res.send(err) })
-})
-
-router.get("/vote/:queID", verifyToken, async (req, res) => {
-    const quesID = req.params.queID
-
-    const question = await questionSchema.findOne({ _id: quesID })
-        .select("votes");
-    const user = await userSchema.findOne({ _id: req.user._id })
-        .select("question");
-
-    if (user.question.voted.includes(quesID)) {
-        user.question.voted.pull(quesID)
-        question.votes = question.votes - 1
-    } else {
-        user.question.voted.push(quesID)
-        question.votes = question.votes + 1
+        return res.send(result)
+    } catch (error) {
+        return res.status(500).send(error)
     }
+})
 
-    await user.save()
-    await question.save()
+router.get("/vote/:queID", verifyToken, async (req, res, next) => {
+    try {
+        const quesID = req.params.queID
 
-    return res.send()
+        const question = await questionSchema.findOne({ _id: quesID })
+            .select("votes");
+        if (!question) {
+            return res.status(500).send('Question not found');
+        }
+        const user = await userSchema.findOne({ _id: req.user._id })
+            .select("question");
+        if (!question) {
+            return res.status(500).send('User not found');
+        }
+
+        if (user.question.voted.includes(quesID)) {
+            user.question.voted.pull(quesID)
+            question.votes = question.votes - 1
+        } else {
+            user.question.voted.push(quesID)
+            question.votes = question.votes + 1
+        }
+
+        await user.save()
+        await question.save()
+
+        return res.send()
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 })
 
 module.exports = router;
