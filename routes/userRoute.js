@@ -43,7 +43,7 @@ router.post("/signin", async (req, res) => {
             return res.status(404).send('Wrong Email..');
         }
 
-        const passwordMatch = bcrypt.compare(password, existingUser.password);
+        const passwordMatch = await bcrypt.compare(password, existingUser.password);
         if (!passwordMatch) {
             return res.status(404).send('wrong password..');
         }
