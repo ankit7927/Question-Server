@@ -18,7 +18,10 @@ const userSchema = new mongoose.Schema({
         asked: [mongoose.Schema.Types.ObjectId],
         answerd: [mongoose.Schema.Types.ObjectId],
         saved: [mongoose.Schema.Types.ObjectId],
-        voted: [mongoose.Schema.Types.ObjectId],
+        voted: {
+            questions: [mongoose.Schema.Types.ObjectId],
+            answers: [mongoose.Schema.Types.ObjectId]
+        }
     }
 })
 
