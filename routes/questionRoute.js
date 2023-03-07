@@ -50,9 +50,7 @@ router.post("/answer", async (req, res) => {
     try {
         const { answer, email, name, quesID } = req.body
         const user = await userSchema.findOne({ email: email })
-        if (!user) {
-            return res.status(404).send("User not found..");
-        }
+
         questionSchema.findByIdAndUpdate(
             { _id: quesID },
             {
@@ -73,7 +71,7 @@ router.post("/answer", async (req, res) => {
     }
 })
 
-router.get("/que/:queID", (req, res, next) => {
+router.get("/que/:queID", (req, res) => {
 
     questionSchema.findById({ _id: req.params.queID })
         .then(data => {
@@ -182,7 +180,7 @@ router.get("/index", async (req, res) => {
     }
 })
 
-router.get("/vote/:queID", verifyToken, async (req, res, next) => {
+router.get("/vote/:queID", verifyToken, async (req, res) => {
     try {
         const quesID = req.params.queID
 
@@ -193,23 +191,57 @@ router.get("/vote/:queID", verifyToken, async (req, res, next) => {
         }
         const user = await userSchema.findOne({ _id: req.user._id })
             .select("question");
-        if (!question) {
+        if (!user) {
             return res.status(500).send('User not found');
         }
 
-        if (user.question.voted.includes(quesID)) {
-            user.question.voted.pull(quesID)
+        if (user.question.voted.questions.includes(quesID)) {
+            user.question.voted.questions.pull(quesID)
             question.votes = question.votes - 1
         } else {
-            user.question.voted.push(quesID)
+            user.question.voted.questions.push(quesID)
             question.votes = question.votes + 1
         }
 
         await user.save()
         await question.save()
 
-        return res.send()
+        return res.send(question.votes.toString())
     } catch (error) {
+        return res.status(500).send(error)
+    }
+})
+
+router.get("/vote/:queID/:ansID", verifyToken, async (req, res) => {
+    try {
+        const quesID = req.params.queID
+        const ansID = req.params.ansID
+        const question = await questionSchema.findOne({ _id: quesID })
+            .select("answers");
+
+        if (!question) return res.status(500).send('Question not found');
+
+        const user = await userSchema.findOne({ _id: req.user._id })
+            .select("question");
+
+        if (!user) return res.status(500).send('User not found');
+
+        const x = question.answers.find(item => item._id == ansID) 
+
+        if (user.question.voted.answers.includes(ansID)) {
+            user.question.voted.answers.pull(ansID)
+            x.votes = x.votes - 1
+        } else {
+            user.question.voted.answers.push(ansID)
+            x.votes = x.votes + 1
+        }
+
+        await user.save()
+        await question.save()
+
+        return res.send(question)
+    } catch (error) {
+        console.log(error);
         return res.status(500).send(error)
     }
 })
