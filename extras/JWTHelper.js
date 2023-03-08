@@ -15,7 +15,6 @@ const generateToken = (_id) => {
 
 const verifyToken = (req, res, next) => {
     const token = req.headers.authorization || "";
-    console.log(token)
     if (!token) {
         return res.status(400).json({ info: "no authorization header provided" });
     }

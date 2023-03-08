@@ -1,6 +1,7 @@
 var express = require("express");
 var logger = require("morgan");
 var cors = require("cors");
+require('dotenv').config()
 require("./database/conn");
 
 app = express();
