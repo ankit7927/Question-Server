@@ -137,11 +137,11 @@ router.get('/trending', async (req, res) => {
                 $project: {
                     _id: 1,
                     title: 1,
-                    upvotes: { $size: "$upvotes" }
+                    votes: { $size: "$votes" }
                 }
             },
             {
-                $sort: { upvotes: -1 }
+                $sort: { votes: -1 }
             },
             {
                 $limit: 10 // Returns only the top 10 trending questions
