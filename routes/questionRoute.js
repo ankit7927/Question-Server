@@ -246,4 +246,18 @@ router.get("/vote/:queID/:ansID", verifyToken, async (req, res) => {
     }
 })
 
+router.post("/get-list", (req, res)=>{
+    try{
+        const idList = req.body.idList;
+        
+        questionSchema.find({_id: {$in:idList}})
+        .select("question votes createdAt")
+        .then(data => { res.send(data) })
+        .catch(err => { return res.status(500).send(err); })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).send(error)
+    }
+})
+
 module.exports = router;
