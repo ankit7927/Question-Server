@@ -246,7 +246,49 @@ router.get("/vote/:queID/:ansID", verifyToken, async (req, res) => {
     }
 })
 
-router.post("/get-list", (req, res)=>{
+router.get("/save/:queID", verifyToken, async (req, res)=>{
+    try{
+        const quesID = req.params.queID;
+        const user = await userSchema.findOne({ _id: req.user._id })
+            .select("question");
+
+        if (!user) return res.status(500).send('User not found');
+
+        if (!user.question.saved.includes(quesID)) {
+            user.question.saved.push(quesID)
+        } 
+
+        await user.save()
+
+        return res.send("ok")
+    }catch (error) {
+        console.log(error);
+        return res.status(500).send(error)
+    }
+})
+
+router.delete("/save/:queID", verifyToken, async (req, res)=>{
+    try{
+        const quesID = req.params.queID;
+        const user = await userSchema.findOne({ _id: req.user._id })
+            .select("question");
+
+        if (!user) return res.status(500).send('User not found');
+
+        if (user.question.saved.includes(quesID)) {
+            user.question.saved.pull(quesID)
+        } 
+
+        await user.save()
+
+        return res.send(user.question)
+    }catch (error) {
+        console.log(error);
+        return res.status(500).send(error)
+    }
+})
+
+router.post("/get-list", verifyToken, (req, res)=>{
     try{
         const idList = req.body.idList;
         
