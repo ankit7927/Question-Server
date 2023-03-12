@@ -1,5 +1,6 @@
 var express = require("express");
 const userSchema = require("../database/schemas/userSchema");
+const questionSchema = require("../database/schemas/questionSchema");
 const { generateToken } = require("../extras/JWTHelper");
 const { verifyToken } = require("../extras/JWTHelper");
 const bcrypt = require('bcrypt');
@@ -74,10 +75,16 @@ router.put("/profile", verifyToken, (req, res) => {
 })
 
 router.get("/questions", verifyToken, (req, res) => {
-    const userID = req.user._id;
-    userSchema.findOne({ _id: userID }, { question: 1 })
-        .then(data => {
-            return res.send(data)
+    userSchema.findOne({ _id: req.user._id }, { question: 1 })
+        .then(async data => {
+            let quesObj = {}
+            quesObj.asked = await questionSchema.find({ _id: { $in: data.question.asked } })
+                .select("question createdAt votes")
+            quesObj.answerd = await questionSchema.find({ _id: { $in: data.question.answerd } })
+                .select("question createdAt votes")
+            quesObj.saved = await questionSchema.find({ _id: { $in: data.question.saved } })
+                .select("question createdAt votes")
+            return res.send(quesObj)
         }).catch(err => { return res.status(500).send(err); })
 })
 
