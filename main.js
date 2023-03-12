@@ -3,8 +3,8 @@ var express = require("express");
 var logger = require("morgan");
 var cors = require("cors");
 const corsOptions = require("./config/corsOptions");
-require('dotenv').config()
-require("./database/conn");
+const connectDB = require('./database/conn');
+const { default: mongoose } = require('mongoose');
 
 app = express();
 const port = process.env.PORT || 4000
@@ -17,9 +17,18 @@ app.use(
   })
 );
 
+connectDB()
+
 app.use("/user", require("./routes/userRoute"))
 app.use("/ques", require("./routes/questionRoute"))
 
-app.listen(port, () => {
-  console.log(`server started on ${port}`);
-});
+mongoose.connection.once("open", () => {
+  console.log("connected to database");
+  app.listen(port, () => {
+    console.log(`server started on ${port}`);
+  });
+})
+
+mongoose.connection.on("error", (error) => {
+  console.log(error);
+})

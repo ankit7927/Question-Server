@@ -1,13 +1,17 @@
 const mongoose = require("mongoose")
 
-const remoteDB = process.env.REMOTE_DATABASE_URL || ""
-const localDB = "mongodb://127.0.0.1:27017/questionDB";
+let db_url = ""
 
-mongoose.set("strictQuery", false)
-main().then(()=>{
-    console.log("conncted to database");
-}).catch(err => console.log(err));
+if (process.env.NODE_ENV === "pro") db_url = process.env.REMOTE_DATABASE_URL || "";
+else db_url = "mongodb://127.0.0.1:27017/questionDB";
 
-async function main() {
-  await mongoose.connect(remoteDB);
+mongoose.set('strictQuery', false);
+const connectDB = async () => {
+  try {
+    await mongoose.connect(db_url)
+  } catch (error) {
+    console.log(error)
+  }
 }
+
+module.exports = connectDB;
