@@ -7,6 +7,8 @@ router
     .post("/signup", userController.signup)
     .post("/signin", userController.signin)
     .patch("/profile", verifyToken, userController.updateProfile)
-    .get("/question", verifyToken, userController.question)
+    .get("/questions", verifyToken, userController.question)
+    // save or remove question from acc
+    .get("/save-rem/:queID", verifyToken, userController.saveRemoveQues)
 
 module.exports = router;

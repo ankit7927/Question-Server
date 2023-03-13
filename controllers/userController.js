@@ -100,5 +100,24 @@ userController.question = asyncHandler(async (req, res) => {
     res.json(quesObj)
 })
 
+userController.saveRemoveQues = asyncHandler(async (req, res) => {
+    const quesID = req.params.queID;
+    const user = await userSchema.findOne({ _id: req.user._id })
+        .select("question");
+
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    if (!user.question.saved.includes(quesID)) {
+        user.question.saved.push(quesID)
+        await user.save()
+
+        res.send("saved")
+    } else {
+        user.question.saved.pull(quesID)
+        await user.save()
+
+        res.send("removed")
+    }
+})
 
 module.exports = userController;
