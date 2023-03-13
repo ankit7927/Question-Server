@@ -172,7 +172,7 @@ questionController.voteAnswer = asyncHandler(async (req, res) => {
     if (!user) return res.status(400).json({ message: 'user not found' });
 
     const question = await questionSchema.findById({ _id: quesID })
-        .select("votes").exec()
+        .select("votes answers").exec()
 
     if (!question)
         return res.status(400).json({ message: 'question not found' });
