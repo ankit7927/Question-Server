@@ -1,13 +1,14 @@
 {
   "name": "question",
-  "version": "1.0.0",
+  "version": "1.8.6",
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "nodemon main.js"
+    "start": "node main.js",
+    "dev": "nodemon main.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "x64-tech",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.0",
