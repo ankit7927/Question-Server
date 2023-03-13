@@ -1,7 +1,6 @@
 const asyncHandler = require("express-async-handler")
 const userSchema = require("../database/schemas/userSchema");
 const questionSchema = require("../database/schemas/questionSchema");
-const { generateToken } = require("../extras/JWTHelper");
 const bcrypt = require('bcrypt');
 
 const userController = {}
@@ -31,31 +30,6 @@ userController.signup = asyncHandler(async (req, res) => {
     } else {
         res.status(400).json({ message: "invalid user data received" })
     }
-})
-
-userController.signin = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'all fields required' });
-    }
-
-    const existingUser = await userSchema.findOne({ email: email }).lean().exec()
-
-    if (!existingUser) {
-        return res.status(400).json({ message: 'email not found' });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, existingUser.password);
-    if (!passwordMatch) {
-        return res.status(404).send('wrong password..');
-    }
-    res.status(200).json({
-        "token": generateToken(existingUser._id),
-        "name": existingUser.name,
-        "email": existingUser.email,
-        "userID": existingUser._id
-    })
 })
 
 userController.updateProfile = asyncHandler(async (req, res) => {
