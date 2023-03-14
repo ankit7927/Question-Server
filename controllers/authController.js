@@ -25,16 +25,16 @@ authController.signin = asyncHandler(async (req, res) => {
         {
             _id: existingUser._id,
         },
-        "my-access-token-secret",
-        { expiresIn: '15m' }
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: '1d' }
     )
 
     const refreshToken = jwt.sign(
         {
             _id: existingUser._id,
         },
-        "my-refresh-token-secret",
-        { expiresIn: '1d' }
+        process.env.REFRESH_TOKEN_SECRET,
+        { expiresIn: '7d' }
     )
 
     res.cookie("jwt", refreshToken, {
@@ -59,7 +59,7 @@ authController.refreshToken = asyncHandler(async (req, res) => {
     const refreshToken = cookie.jwt
 
     jwt.verify(refreshToken,
-        "my-refresh-token-secret",
+        process.env.REFRESH_TOKEN_SECRET,
         asyncHandler(async (err, decoded) => {
             if (err) return res.status(403).json({ message: "forbidden" })
 
@@ -72,8 +72,8 @@ authController.refreshToken = asyncHandler(async (req, res) => {
                     _id: user._id,
                     email: user.email
                 },
-                "my-access-token-secret",
-                { expiresIn: '5m' }
+                process.env.ACCESS_TOKEN_SECRET,
+                { expiresIn: '1d' }
             )
             res.json({ accesToken })
         }))
