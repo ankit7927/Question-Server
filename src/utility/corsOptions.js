@@ -1,6 +1,6 @@
-const allowedOrigins = require("./allowedOrigins");
+const allowedOrigins = require("../config/origins.config");
 
-const corsOptions ={
+const corsOptions = {
     origin:(origin, cb)=>{
         if (allowedOrigins.includes(origin) || !origin) {
             cb(null, true)
